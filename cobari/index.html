@@ -38,7 +38,11 @@ a{color:inherit}
 #cable .nodo{fill:var(--hondo);stroke:var(--cobre);stroke-width:2.5}
 #cable .nodo.on{fill:var(--ama);stroke:var(--ama)}
 #cable .marco{fill:none;stroke:var(--cobre);stroke-width:1.5;opacity:.7}
-.foto{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:cover;opacity:0;will-change:opacity,transform,clip-path;backface-visibility:hidden}
+.foto{position:absolute;inset:0;z-index:2;width:100%;height:100%;overflow:hidden;opacity:0;will-change:opacity,transform;backface-visibility:hidden}
+.foto>img,.foto>video{display:block;width:100%;height:100%;object-fit:cover}
+.foto>img{transform:scale(1);transition:transform 9s cubic-bezier(.25,.1,.25,1)}
+.foto.vivo>img{transform:scale(1.08)}
+@media (prefers-reduced-motion:reduce){.foto>img{transition:none}}
 #puerta{position:absolute;z-index:3;pointer-events:none;opacity:0;border:7px solid #ebe8e1;border-bottom:0;box-shadow:0 0 0 100vmax rgba(10,23,38,.35),0 0 60px rgba(0,0,0,.55) inset;will-change:opacity,inset}
 #exterior{position:absolute;inset:0;z-index:1;overflow:hidden;pointer-events:none;will-change:opacity}
 #lienzo{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
@@ -267,7 +271,25 @@ const casa = $('#casa'), esc = $('#escena');
 $('#wa-top').href = wa('Hola, quiero pedir presupuesto.'); $('#wa-port').href = wa('Hola, quiero pedir presupuesto.'); $('#wa-fin').href = wa('Hola, quiero pedir presupuesto.');
 
 { const d = document.createElement('div'); d.id = 'puerta'; const o = document.createElement('div'); o.id = 'oscuro'; $('#fotos').appendChild(o); d.innerHTML = '<div id="luz"></div><div id="hoja"></div><div id="umbral"></div>'; $('#fotos').appendChild(d); }
-const fotos = R.map(r => { const im = new Image(); im.className = 'foto'; im.decoding = 'async'; im.src = IMG[r.id]; im.alt = r.n; $('#fotos').appendChild(im); im.decode && im.decode().catch(() => {}); return im; });
+// cada estancia: vídeo corto (Flow) que arranca al llegar; si no hay vídeo, la foto con un acercamiento lento
+const CON_VIDEO = {entrada: 1, salon: 1, cocina: 1, bano: 1};
+const ENCUADRE = {entrada: '24% 50%', cocina: '60% 50%', bano: '62% 50%'};   // en móvil (vertical) se recorta: centrar lo que se arregla en cada estancia
+const fotos = R.map(r => {
+  const w = document.createElement('div'); w.className = 'foto';
+  const fotoSrc = IMG[r.id];
+  let m;
+  if (CON_VIDEO[r.id]) {
+    m = document.createElement('video'); m.muted = true; m.defaultMuted = true; m.playsInline = true;
+    m.setAttribute('muted', ''); m.setAttribute('playsinline', ''); m.setAttribute('aria-label', r.n);
+    m.preload = 'auto'; m.poster = fotoSrc; m.src = 'video/' + r.id + '.mp4';
+  } else { m = new Image(); m.decoding = 'async'; m.src = fotoSrc; m.alt = r.n; m.decode && m.decode().catch(() => {}); }
+  m.style.objectPosition = ENCUADRE[r.id] || '50% 50%'; w.appendChild(m); w._m = m; w._src = fotoSrc; $('#fotos').appendChild(w); return w;
+});
+function activar(i){
+  fotos.forEach((w, k) => { const m = w._m;
+    if (k === i) { w.classList.add('vivo'); if (m.tagName === 'VIDEO') { try { m.currentTime = 0; } catch (e) {} const pr = m.play(); pr && pr.catch(() => {}); } }
+    else { w.classList.remove('vivo'); if (m.tagName === 'VIDEO' && !m.paused) m.pause(); } });
+}
 const SVGNS = 'http://www.w3.org/2000/svg';
 const nodos = R.map(() => { const c = document.createElementNS(SVGNS, 'circle'); c.setAttribute('r', 6); c.setAttribute('class', 'nodo'); $('#nodos').appendChild(c); return c; });
 const ruta = R.map((r, k) => { const b = document.createElement('button'); b.innerHTML = r.n + '<i></i>'; b.setAttribute('aria-label', 'Ir a ' + r.n); b.onclick = () => { if (!enPagina) ir(k + 1); }; $('#ruta').appendChild(b); return b; });
@@ -286,7 +308,7 @@ function ajustar(){
   const lz = $('#lienzo'); lz.style.width = F.w + 'px'; lz.style.height = F.h + 'px';
   const v = $('#vano'), L = F.hoja; v.style.left = L[0] + '%'; v.style.top = L[1] + '%'; v.style.width = (L[2] - L[0]) + '%'; v.style.height = (L[3] - L[1]) + '%';
   $('#hojaF').style.backgroundImage = `url(${vertical ? IMG.hoja_v : IMG.hoja_h})`;
-  $('#interior').style.backgroundImage = `url(${fotos[0].src})`;
+  $('#interior').style.backgroundImage = `url(${fotos[0]._src})`;
   pintar();
 }
 // fachada generada con IA: tamaño, hoja de la puerta en % y dónde se coloca la puerta al empezar
@@ -424,13 +446,13 @@ function bucle(now){
   requestAnimationFrame(bucle);
 }
 function ir(i){
-  idx = Math.max(0, Math.min(ULT, i));
+  idx = Math.max(0, Math.min(ULT, i)); activar(idx - 1);   // el vídeo de la estancia de destino arranca al empezar el paso
   const dist = Math.abs(idx - PROG);
   const D = DUR * Math.min(2.2, Math.max(.6, Math.sqrt(dist)));
   tw = {de: PROG, a: idx, t0: performance.now(), D}; animando = true; bloqueoHasta = performance.now() + D * .8;
   if (!corriendo) { corriendo = true; requestAnimationFrame(bucle); }
 }
-function salirAPagina(){ enPagina = true; document.documentElement.classList.remove('bloq'); setTimeout(() => scrollTo({top: innerHeight, behavior: 'smooth'}), 30); }
+function salirAPagina(){ activar(-1); enPagina = true; document.documentElement.classList.remove('bloq'); setTimeout(() => scrollTo({top: innerHeight, behavior: 'smooth'}), 30); }
 function volverAlRecorrido(){ enPagina = false; document.documentElement.classList.add('bloq'); scrollTo(0, 0); ir(ULT); }
 function gesto(dir){
   if (performance.now() < bloqueoHasta) return;
