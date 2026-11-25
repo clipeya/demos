@@ -380,7 +380,7 @@ function pintar(){
   }
 }
 // ---- un gesto = una puerta; no usa el scroll de la página (así va igual en iPhone y Android) ----
-const ULT = N + 1;
+const ULT = N;                                       // tras la última estancia se pasa directo a las secciones (sin plano)
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 scrollTo(0, 0);
 document.documentElement.classList.add('bloq');
@@ -402,7 +402,7 @@ function ir(i){
   if (!corriendo) { corriendo = true; requestAnimationFrame(bucle); }
 }
 function salirAPagina(){ enPagina = true; document.documentElement.classList.remove('bloq'); setTimeout(() => scrollTo({top: innerHeight, behavior: 'smooth'}), 30); }
-function volverAlRecorrido(){ enPagina = false; document.documentElement.classList.add('bloq'); scrollTo(0, 0); ir(ULT - 1); }
+function volverAlRecorrido(){ enPagina = false; document.documentElement.classList.add('bloq'); scrollTo(0, 0); ir(ULT); }
 function gesto(dir){
   if (performance.now() < bloqueoHasta) return;
   if (enPagina) { if (dir < 0 && scrollY <= 2) volverAlRecorrido(); return; }
