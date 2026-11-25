@@ -65,9 +65,9 @@ header{position:absolute;left:0;right:0;top:0;z-index:8;display:flex;align-items
 .lista #portada p{opacity:1}
 #pista{display:flex;align-items:center;gap:12px;margin-top:22px;font-size:13px;color:var(--cobre-luz);opacity:0;transition:opacity .9s ease 1s}
 .lista #pista{opacity:1}
-#pista b{position:relative;display:block;width:46px;height:1.5px;background:rgba(196,122,72,.35);overflow:hidden}
-#pista b:after{content:"";position:absolute;left:-40%;top:0;width:40%;height:100%;background:var(--cobre-luz);animation:corre 1.8s ease-in-out infinite}
-@keyframes corre{to{left:100%}}
+#pista b{position:relative;display:block;width:1.5px;height:34px;background:rgba(196,122,72,.35);overflow:hidden;flex:none}
+#pista b:after{content:"";position:absolute;left:0;top:-40%;width:100%;height:40%;background:var(--cobre-luz);animation:corre 1.8s ease-in-out infinite}
+@keyframes corre{to{top:100%}}
 
 /* ficha de cada habitación */
 #ficha{position:absolute;z-index:7;left:20px;right:20px;bottom:calc(env(safe-area-inset-bottom) + 22px);max-width:520px;opacity:0;pointer-events:none}
@@ -135,7 +135,7 @@ footer .cont{max-width:880px;margin:0 auto;display:flex;justify-content:space-be
     <div id="portada">
       <h1><span><i>Tu casa,</i></span><span><i>cuarto a cuarto.</i></span></h1>
       <p>Electricidad y fontanería. Recorre la casa y pide presupuesto de lo que quieras arreglar.</p>
-      <div id="pista"><b></b>Desliza para entrar</div>
+      <div id="pista"><b></b>Desliza hacia abajo para entrar</div>
     </div>
 
     <nav id="ruta" aria-label="Habitaciones"></nav>
@@ -208,7 +208,7 @@ const R = [
  {id:'dormitorio',n:'Dormitorio',     v:[58,41], h:[58,28], et:'Confort',          pp:'del dormitorio',       t:'Dormitorio a tu gusto', p:'Ventilador de techo, apliques junto a la cama y enchufes con USB.'}
 ];
 // contorno de la casa en % de cada imagen (marco de cobre)
-const CONT = {v:[0, 33.5, 91.7, 69.5], h:[0, 5.2, 90.1, 100]};   // medido del canal alfa real
+const CONT = {v:[0, 33.6, 90.9, 64.1], h:[0, 5.4, 89.4, 90.6]};   // casa sólida medida del canal alfa, sin la sombra
 const N = R.length, $ = s => document.querySelector(s);
 const casa = $('#casa'), esc = $('#escena');
 $('#wa-top').href = wa('Hola, quiero pedir presupuesto.'); $('#wa-fin').href = wa('Hola, quiero pedir presupuesto.');
