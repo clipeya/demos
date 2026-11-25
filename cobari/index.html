@@ -241,7 +241,7 @@ let CAM = {fx: 0, fy: 0, s: 1};
 // z = 1: la casa entera encuadrada; k = 0..1 lleva el punto de mira del encuadre al centro de la pantalla
 function camara(cx, cy, z, k = 0){
   const b = BB(), bw = (b[2] - b[0]) / 100 * IW, bh = (b[3] - b[1]) / 100 * IH;
-  const s0 = vertical ? Math.min(innerWidth * .88 / bw, innerHeight * .40 / bh) : Math.min(innerWidth * .54 / bw, innerHeight * .76 / bh);
+  const s0 = vertical ? Math.min(innerWidth * .84 / bw, innerHeight * .40 / bh) : Math.min(innerWidth * .54 / bw, innerHeight * .76 / bh);
   const s = s0 * z;
   const xc = innerWidth * lerp(vertical ? .5 : .66, .5, k), yc = innerHeight * lerp(vertical ? .37 : .5, .5, k);
   const fx = xc - cx / 100 * IW * s, fy = yc - cy / 100 * IH * s;
@@ -309,7 +309,7 @@ function pintar(){
   if (p <= .001) { casa.style.removeProperty('opacity'); casa.style.removeProperty('transition'); }   // deja actuar el fundido de entrada
   else { casa.style.transition = 'none'; casa.style.opacity = opCasa.toFixed(3); }
   $('#cable').style.opacity = opCasa.toFixed(3);
-  cable(progCable); $('#marco').style.opacity = opMarco;
+  cable(progCable); $('#marco').style.display = 'none';   // sin marco: solo el plano
   PUERTA = null;
   fotos.forEach((f, k) => { const v = vis[k]; if (!v) { if (f.style.opacity !== '0') f.style.opacity = '0'; return; } foto(f, ...v); });
   const pu = $('#puerta');
