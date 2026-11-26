@@ -158,6 +158,11 @@ header{position:absolute;left:0;right:0;top:0;z-index:8;display:flex;align-items
 .hacemos{margin:30px 0 18px;color:#c7d0da;font-size:15.5px;line-height:1.7;max-width:60ch}
 .sellos{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
 .sellos li{border:1px solid rgba(254,212,4,.35);color:var(--papel);border-radius:999px;padding:8px 14px;font-size:13.5px}
+.rellenar{display:inline-block;align-self:flex-start;background:var(--ama);color:#16130a;font-weight:750;font-size:11.5px;letter-spacing:.01em;padding:4px 9px;border-radius:999px;line-height:1.2}
+.hueco,.foto-p{flex-direction:column;justify-content:space-between;align-items:stretch!important;gap:12px}
+.hueco>span:last-child,.foto-p>span:last-child{color:var(--papel);font-weight:650;font-size:15.5px;line-height:1.3}
+.hueco small,.foto-p small{display:block;margin-top:4px;color:#aab6c3;font-weight:400;font-size:13px}
+.pie-rellenar{display:inline-flex;align-items:center;gap:8px}
 .huecos{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
 .hueco{border:1.5px dashed rgba(196,122,72,.55);border-radius:18px;padding:22px;min-height:150px;display:flex;align-items:flex-end;color:#c7d0da;font-size:15px;line-height:1.45;background:linear-gradient(180deg,rgba(196,122,72,.05),transparent)}
 .cierre .pedir{max-width:420px}
@@ -218,34 +223,34 @@ footer .cont{max-width:880px;margin:0 auto;display:flex;justify-content:space-be
     <h2>Quiénes somos</h2>
     <p class="entr">Cobari Solutions somos Haytam y Aaron. Hacemos instalaciones y reformas para casas y negocios, con un mismo equipo de principio a fin.</p>
     <div class="equipo">
-      <article class="persona"><h3>Haytam</h3><a href="tel:+34663419911">663 41 99 11</a></article>
-      <article class="persona"><h3>Aaron</h3><a href="tel:+34623184295">623 18 42 95</a></article>
+      <article class="persona"><div class="foto-p"><span class="rellenar">Por rellenar</span><span>Foto de Haytam<small>De cara o medio cuerpo, con buena luz</small></span></div><h3>Haytam</h3><a href="tel:+34663419911">663 41 99 11</a></article>
+      <article class="persona"><div class="foto-p"><span class="rellenar">Por rellenar</span><span>Foto de Aaron<small>De cara o medio cuerpo, con buena luz</small></span></div><h3>Aaron</h3><a href="tel:+34623184295">623 18 42 95</a></article>
     </div>
     <p class="hacemos">Electricidad · Agua · Gas · Aire acondicionado · Baños · Cocinas · Reformas integrales · Jardines</p>
     <ul class="sellos"><li>Trabajo profesional</li><li>Plazos cumplidos</li><li>Presupuestos sin compromiso</li><li>Experiencia y dedicación</li></ul>
   </div>
 </section>
 
-<section class="bloque" hidden data-pendiente="reseñas reales de Google">
+<section class="bloque" data-pendiente="reseñas reales de Google">
   <div class="cont">
     <h2>Lo que dicen de Cobari</h2>
-    <p class="entr">Aquí irán las reseñas reales de Google, con el nombre de cada cliente.</p>
+    <p class="entr">Opiniones reales de clientes, sacadas de Google.</p>
     <div class="huecos">
-      <div class="hueco">Reseña pendiente de que la pase Haytam.</div>
-      <div class="hueco">Reseña pendiente.</div>
-      <div class="hueco">Reseña pendiente.</div>
+      <div class="hueco"><span class="rellenar">Por rellenar</span><span>Reseña 1<small>Texto de la reseña y nombre del cliente</small></span></div>
+      <div class="hueco"><span class="rellenar">Por rellenar</span><span>Reseña 2<small>Texto de la reseña y nombre del cliente</small></span></div>
+      <div class="hueco"><span class="rellenar">Por rellenar</span><span>Reseña 3<small>Texto de la reseña y nombre del cliente</small></span></div>
     </div>
   </div>
 </section>
 
-<section class="bloque" hidden data-pendiente="fotos de antes y después" style="background:#0c1b2d">
+<section class="bloque" data-pendiente="fotos de antes y después" style="background:#0c1b2d">
   <div class="cont">
     <h2>Obras hechas</h2>
     <p class="entr">Fotos de antes y después de trabajos reales.</p>
     <div class="huecos">
-      <div class="hueco">Cuadro eléctrico: antes y después (pendiente).</div>
-      <div class="hueco">Baño: antes y después (pendiente).</div>
-      <div class="hueco">Cocina: antes y después (pendiente).</div>
+      <div class="hueco"><span class="rellenar">Por rellenar</span><span>Cuadro eléctrico<small>Foto de antes y de después</small></span></div>
+      <div class="hueco"><span class="rellenar">Por rellenar</span><span>Baño<small>Foto de antes y de después</small></span></div>
+      <div class="hueco"><span class="rellenar">Por rellenar</span><span>Cocina<small>Foto de antes y de después</small></span></div>
     </div>
   </div>
 </section>
@@ -259,7 +264,7 @@ footer .cont{max-width:880px;margin:0 auto;display:flex;justify-content:space-be
   </div>
 </section>
 
-<footer><div class="cont"><span>Cobari Solutions. Electricidad y fontanería</span></div></footer>
+<footer><div class="cont"><span>Cobari Solutions. Electricidad y fontanería</span><span class="pie-rellenar"><span class="rellenar">Por rellenar</span> Zona de trabajo y horario</span></div></footer>
 
 <script>
 const TEL = '34663419911';            // por confirmar con Haytam
@@ -487,7 +492,7 @@ const VERT = innerWidth / innerHeight < 1;
 const PASEO = {src: VERT ? 'video/paseo_v2.mp4' : 'video/paseo_h2.mp4', poster: VERT ? 'img/paseo_poster_v.jpg' : 'img/paseo_poster.jpg', T: [0, 7.8125, 17.5625, 25.3958, 33.2292, 41.1458, 48.9792]};   // móvil: vertical 720x1280 (6 MB); escritorio: 1080p
 const pv = $('#paseo');
 const PASEO_ACTIVO = true;
-const RITMO = 2.2;   // velocidad de cada tramo: 8 s de vídeo en ~3,6 s   // true = paseo en vídeo; false = fotos realistas
+const RITMO = 2.8;   // velocidad de cada tramo: 8 s de vídeo en ~2,8 s   // true = paseo en vídeo; false = fotos realistas
 let usarVideo = PASEO_ACTIVO && !!(pv.canPlayType && pv.canPlayType('video/mp4')), enMarcha = false;
 if (usarVideo) {
   document.documentElement.classList.add('modo-video');
