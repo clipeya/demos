@@ -484,7 +484,7 @@ addEventListener('keydown', ev => {
 addEventListener('resize', ajustar);
 // ---- paseo en vídeo: un solo vídeo que recorre la casa; cada gesto anda hasta la siguiente estancia y se para ----
 const VERT = innerWidth / innerHeight < 1;
-const PASEO = {src: VERT ? 'video/paseo_v.mp4' : 'video/paseo_h.mp4', poster: VERT ? 'img/paseo_poster_v.jpg' : 'img/paseo_poster.jpg', T: [0, 7.8125, 15.2292, 23.0625, 30.8958, 38.8125, 46.6458]};   // móvil: vertical 720x1280 (6 MB); escritorio: 1080p
+const PASEO = {src: VERT ? 'video/paseo_v2.mp4' : 'video/paseo_h2.mp4', poster: VERT ? 'img/paseo_poster_v.jpg' : 'img/paseo_poster.jpg', T: [0, 7.8125, 17.5625, 25.3958, 33.2292, 41.1458, 48.9792]};   // móvil: vertical 720x1280 (6 MB); escritorio: 1080p
 const pv = $('#paseo');
 const PASEO_ACTIVO = true;
 const RITMO = 2.2;   // velocidad de cada tramo: 8 s de vídeo en ~3,6 s   // true = paseo en vídeo; false = fotos realistas
