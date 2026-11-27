@@ -23,20 +23,17 @@
   const pad = n => String(n).padStart(2, '0');
   const fechaISO = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 
-  // Semana visible: martes a sábado. Domingo y lunes (cerrado) → semana siguiente.
+  // Próximos 5 días de apertura (martes a sábado) desde hoy; si hoy ya cerró, desde mañana. Así nunca sale una semana «apagada».
   function semana(base) {
-    const hoy = base ? new Date(base) : new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const dw = hoy.getDay();
-    const martes = new Date(hoy);
-    if (dw === 0) martes.setDate(hoy.getDate() + 2);
-    else if (dw === 1) martes.setDate(hoy.getDate() + 1);
-    else if (dw === 6 && !base && (new Date().getHours() * 60 + new Date().getMinutes()) >= 20 * 60 + 30) martes.setDate(hoy.getDate() + 3); // sábado ya cerrado → semana siguiente
-    else martes.setDate(hoy.getDate() - (dw - 2));
+    const ref = base ? new Date(base) : new Date();
+    const d = new Date(ref); d.setHours(0, 0, 0, 0);
+    const cerrado = !base && (ref.getHours() * 60 + ref.getMinutes()) >= 20 * 60 + 30;
+    if (cerrado) d.setDate(d.getDate() + 1);
     const dias = [];
-    for (let i = 0; i < 5; i++) {
-      const d = new Date(martes); d.setDate(martes.getDate() + i);
-      dias.push({ iso: fechaISO(d), txt: DIAS_TXT[d.getDay()], num: d.getDate(), fecha: d });
+    while (dias.length < 5) {
+      const dw = d.getDay();
+      if (dw >= 2 && dw <= 6) dias.push({ iso: fechaISO(d), txt: DIAS_TXT[dw], num: d.getDate(), fecha: new Date(d) });
+      d.setDate(d.getDate() + 1);
     }
     return dias;
   }
@@ -53,7 +50,23 @@
 
   function leer() {
     try { const s = JSON.parse(localStorage.getItem(CLAVE)); if (s && s.marcas && s.solicitudes) return s; } catch (e) {}
-    return { marcas: {}, solicitudes: [] };
+    return { marcas: {}, solicitudes: ejemplos() };
+  }
+  // Solicitudes [ejemplo] para que la demo se vea viva (libres, solicitados y ocupados mezclados). Petición de Andy 27-nov 22:14.
+  function ejemplos() {
+    const ideas = [['Laura [ejemplo]', 'Retrato de mi perro en realismo', 'Antebrazo', 'Mediano'],
+                   ['Marc [ejemplo]', 'Rosa fina con una fecha', 'Muñeca', 'Pequeño'],
+                   ['Sara [ejemplo]', 'Ángel en black & grey', 'Espalda', 'Grande']];
+    const dias = semana(); const out = [];
+    TATUADORES.forEach((t, i) => {
+      const dia = dias[Math.min(dias.length - 1, 1 + i)].iso;
+      const f = FRANJAS.find(f => { const k = clave(t.id, dia, f.ini); return !semilla(k) && !pasado(k); });
+      if (!f) return;
+      const [nombre, idea, zona, tamano] = ideas[i];
+      out.push({ id: 'ej' + i, clave: clave(t.id, dia, f.ini), tatuador: t.id, estado: 'pendiente', creada: new Date().toISOString(),
+                 nombre, contacto: '', idea, zona, tamano, foto: '', fotoNombre: '', ejemplo: true });
+    });
+    return out;
   }
   function guardar(s) {
     try { localStorage.setItem(CLAVE, JSON.stringify(s)); } catch (e) {}

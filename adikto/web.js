@@ -8,6 +8,12 @@
 
   /* ---------- 1. Entrada: la gota cae, se abre en mancha y aparece el logo ---------- */
   const intro = $('#intro'), fijo = $('.intro-fijo'), gota = $('#gota'), mancha = $('#mancha circle'), aguja = $('#aguja');
+  // En pantallas anchas el SVG (400x800) se recortaba y la gota quedaba fuera de vista: se ensancha el viewBox para ver siempre el alto entero.
+  const svgIntro = $('.intro-svg');
+  function ajustarVista() {
+    const asp = innerWidth / innerHeight, W = Math.max(400, 800 * asp);
+    svgIntro.setAttribute('viewBox', (200 - W / 2).toFixed(1) + ' 0 ' + W.toFixed(1) + ' 800');
+  }
   function pintarIntro() {
     const r = intro.getBoundingClientRect();
     const total = intro.offsetHeight - innerHeight;
@@ -26,8 +32,8 @@
   }
   let pend = false;
   addEventListener('scroll', () => { if (!pend) { pend = true; requestAnimationFrame(() => { pend = false; pintarIntro(); }); } }, { passive: true });
-  addEventListener('resize', pintarIntro);
-  pintarIntro();
+  addEventListener('resize', () => { ajustarVista(); pintarIntro(); });
+  ajustarVista(); pintarIntro();
 
   /* ---------- 2. Walk-in hoy ---------- */
   function pintarWalkin() {
@@ -91,7 +97,7 @@
     }).join('');
   }
   function pintarMis() {
-    const s = A.leer(); const L = s.solicitudes.slice().reverse();
+    const s = A.leer(); const L = s.solicitudes.filter(r => !r.ejemplo).reverse();
     $('#mis').hidden = !L.length;
     const txt = { pendiente: 'Pendiente', aceptada: 'Aceptada', propuesta: 'Te proponen otra hora', rechazada: 'No disponible' };
     $('#misLista').innerHTML = L.map(r => '<li data-id="' + r.id + '"><span>' + esc(A.txtHueco(r.clave)) + (r.estado === 'propuesta' ? '<br><small>Propuesta: ' + esc(A.txtHueco(r.propuesta)) + '</small>' : '') + '</span><span class="est ' + r.estado + '">' + txt[r.estado] + '</span></li>').join('');
