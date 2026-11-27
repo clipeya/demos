@@ -1,4 +1,4 @@
-/* web.js · Adikto demo · comportamiento de index.html (entrada, walk-in, artistas, agenda, formulario, antes/después)
+/* web.js · Adikto demo · comportamiento de index.html v2 (entrada con tinta y sonido, pasillo 3D de artistas, walk-in, agenda, formulario, antes/después)
    Entra: window.Adikto (app.js). Sale: la página viva. Se prueba con prueba_demo.py. */
 (function () {
   const A = window.Adikto;
@@ -6,34 +6,66 @@
   const reducido = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  /* ---------- 1. Entrada: la gota cae, se abre en mancha y aparece el logo ---------- */
-  const intro = $('#intro'), fijo = $('.intro-fijo'), gota = $('#gota'), mancha = $('#mancha circle'), aguja = $('#aguja');
-  // En pantallas anchas el SVG (400x800) se recortaba y la gota quedaba fuera de vista: se ensancha el viewBox para ver siempre el alto entero.
-  const svgIntro = $('.intro-svg');
-  function ajustarVista() {
-    const asp = innerWidth / innerHeight, W = Math.max(400, 800 * asp);
-    svgIntro.setAttribute('viewBox', (200 - W / 2).toFixed(1) + ' 0 ' + W.toFixed(1) + ' 800');
+  /* ---------- 1. Sonido: máquina de tatuar con Web Audio (sin audios de terceros) ----------
+     Zumbido de bobina ~124 Hz: diente de sierra filtrado (cuerpo) + ruido en banda modulado a la misma
+     frecuencia (el golpe de la aguja) + leve vaivén del motor. Solo arranca tras un toque del usuario. */
+  const Sonido = (function () {
+    let ctx = null, activo = false, master = null, ruido = null;
+    function crear() {
+      const C = window.AudioContext || window.webkitAudioContext; if (!C) return false;
+      ctx = new C(); master = ctx.createGain(); master.gain.value = 0.0001; master.connect(ctx.destination);
+      const n = ctx.sampleRate * 2; ruido = ctx.createBuffer(1, n, ctx.sampleRate); const d = ruido.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      return true;
+    }
+    function zumbido(dur, fuerza) {
+      if (!activo || !ctx) return;
+      const t = ctx.currentTime, f0 = 124;
+      const env = ctx.createGain(); env.gain.setValueAtTime(0.0001, t);
+      env.gain.exponentialRampToValueAtTime(fuerza, t + 0.09);
+      env.gain.setValueAtTime(fuerza, t + Math.max(0.1, dur - 0.28));
+      env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      env.connect(master);
+      const saw = ctx.createOscillator(); saw.type = 'sawtooth'; saw.frequency.setValueAtTime(82, t); saw.frequency.exponentialRampToValueAtTime(f0, t + 0.22);
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.Q.value = 2.5;
+      const gS = ctx.createGain(); gS.gain.value = 0.55; saw.connect(lp).connect(gS).connect(env);
+      const vai = ctx.createOscillator(); vai.frequency.value = 6.5; const gV = ctx.createGain(); gV.gain.value = 2.2; vai.connect(gV).connect(saw.frequency);
+      const nz = ctx.createBufferSource(); nz.buffer = ruido; nz.loop = true;
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2600; bp.Q.value = 1.1;
+      const am = ctx.createGain(); am.gain.value = 0;
+      const lfo = ctx.createOscillator(); lfo.type = 'square'; lfo.frequency.setValueAtTime(82, t); lfo.frequency.exponentialRampToValueAtTime(f0, t + 0.22);
+      const gL = ctx.createGain(); gL.gain.value = 0.32; lfo.connect(gL).connect(am.gain);
+      nz.connect(bp).connect(am).connect(env);
+      [saw, vai, nz, lfo].forEach(o => { o.start(t); o.stop(t + dur + 0.05); });
+    }
+    function encender() {
+      if (!ctx && !crear()) return false;
+      if (ctx.state === 'suspended') ctx.resume();
+      activo = true; master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0.22, ctx.currentTime, 0.02);
+      return true;
+    }
+    function apagar() { activo = false; if (ctx) master.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.03); }
+    return { encender, apagar, zumbido, get activo() { return activo; } };
+  })();
+  const bSon = $('#sonido');
+  function pintarSonido() {
+    bSon.setAttribute('aria-pressed', String(Sonido.activo));
+    bSon.setAttribute('aria-label', Sonido.activo ? 'Sonido activado. Silenciar' : 'Sonido apagado. Activar sonido');
   }
-  function pintarIntro() {
-    const r = intro.getBoundingClientRect();
-    const total = intro.offsetHeight - innerHeight;
-    const p = reducido ? 1 : Math.min(1, Math.max(0, -r.top / (total || 1)));
-    const caida = Math.min(1, p / 0.35);                 // 0-35 %: cae la gota
-    const abre = Math.min(1, Math.max(0, (p - 0.3) / 0.35)); // 30-65 %: se abre la mancha
-    const logo = Math.min(1, Math.max(0, (p - 0.5) / 0.25));
-    const resto = Math.min(1, Math.max(0, (p - 0.7) / 0.2));
-    gota.setAttribute('transform', 'translate(0,' + (190 + caida * 310) + ') scale(' + (1 - abre) + ')');
-    gota.style.transformOrigin = '200px 50px';
-    aguja.setAttribute('transform', 'translate(0,' + (-caida * 40) + ')');
-    mancha.setAttribute('r', String(1 + Math.pow(abre, 1.6) * 720));
-    fijo.style.setProperty('--p', logo.toFixed(3));
-    fijo.style.setProperty('--p1', Math.min(1, p * 4).toFixed(3));
-    fijo.style.setProperty('--p2', resto.toFixed(3));
+  bSon.addEventListener('click', () => { if (Sonido.activo) Sonido.apagar(); else { Sonido.encender(); Sonido.zumbido(0.5, 0.5); } pintarSonido(); });
+
+  /* ---------- 1b. Entrada: «Entrar» → se reproduce sola (tinta negra con brillo del logo + logo real + zumbido) ---------- */
+  const entrada = $('#intro'); let dentro = false;
+  function entrar(conSonido) {
+    if (dentro) return; dentro = true;
+    if (conSonido && Sonido.encender()) Sonido.zumbido(reducido ? 0.9 : 2.8, 0.9);
+    pintarSonido();
+    entrada.classList.add('dentro'); document.documentElement.classList.add('ya-dentro');
   }
-  let pend = false;
-  addEventListener('scroll', () => { if (!pend) { pend = true; requestAnimationFrame(() => { pend = false; pintarIntro(); }); } }, { passive: true });
-  addEventListener('resize', () => { ajustarVista(); pintarIntro(); });
-  ajustarVista(); pintarIntro();
+  $('#entrar').addEventListener('click', () => entrar(true));
+  $('#entrarMudo').addEventListener('click', () => entrar(false));
+  // Si alguien baja sin tocar, el logo aparece igual (en silencio): nunca se queda la pantalla vacía.
+  addEventListener('scroll', function prim() { if (scrollY > 40) { entrar(false); removeEventListener('scroll', prim); } }, { passive: true });
 
   /* ---------- 2. Walk-in hoy ---------- */
   function pintarWalkin() {
@@ -43,25 +75,103 @@
     L.innerHTML = w.libres.map(t => '<div class="wk"><div><span class="punto"></span><b>' + esc(t.nombre) + '</b><small>Libre ' + w.franja.ini + '-' + w.franja.fin + ' · ven sin cita</small></div><a class="btn btn-borde" href="#agenda" data-ver="' + t.id + '">Agenda</a></div>').join('');
   }
 
-  /* ---------- 3. Artistas: una parada del scroll por tatuador ---------- */
-  function arte(seed, tipo) {
-    // Pieza de muestra dibujada (no es foto real): lámina de flash en línea clara sobre fondo carbón.
-    const sombra = '<radialGradient id="s' + seed + '" cx="50%" cy="45%" r="70%"><stop offset="0" stop-color="#2a2a2a"/><stop offset="1" stop-color="#0d0d0d"/></radialGradient>';
-    const rel = '<linearGradient id="r' + seed + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f2efe9" stop-opacity=".55"/><stop offset="1" stop-color="#f2efe9" stop-opacity="0"/></linearGradient>';
-    const F = 'url(#r' + seed + ')';
-    const formas = {
-      ojo: '<path d="M40 200 C 95 128 205 128 260 200 C 205 272 95 272 40 200 Z"/><circle cx="150" cy="200" r="42" fill="' + F + '"/><circle cx="150" cy="200" r="17" fill="#f2efe9" stroke="none"/><circle cx="141" cy="191" r="5" fill="#0d0d0d" stroke="none"/><path d="M70 160 L58 140 M100 140 L94 118 M150 132 L150 108 M200 140 L206 118 M230 160 L242 140"/><path d="M150 268 C 142 290 140 300 150 312 C 160 300 158 290 150 268 Z" fill="' + F + '"/>',
-      luna: '<path d="M178 95 A 112 112 0 1 0 178 305 A 88 88 0 1 1 178 95 Z" fill="' + F + '"/><path d="M228 140 L234 158 L252 158 L238 170 L244 188 L228 177 L212 188 L218 170 L204 158 L222 158 Z"/><circle cx="236" cy="236" r="3" fill="#f2efe9"/><circle cx="214" cy="268" r="2" fill="#f2efe9"/><circle cx="252" cy="210" r="2" fill="#f2efe9"/>',
-      daga: '<path d="M150 62 L168 236 L150 262 L132 236 Z" fill="' + F + '"/><path d="M150 70 L150 248"/><rect x="104" y="236" width="92" height="14" rx="7"/><rect x="140" y="250" width="20" height="66" rx="5"/><path d="M140 266 L160 274 M140 282 L160 290 M140 298 L160 306"/><circle cx="150" cy="330" r="13"/><path d="M70 150 C 110 130 130 170 170 150 C 210 130 230 170 240 160" />',
-      flor: '<g transform="translate(150 175)"><ellipse rx="22" ry="56" transform="rotate(0) translate(0 -48)" fill="' + F + '"/><ellipse rx="22" ry="56" transform="rotate(60) translate(0 -48)"/><ellipse rx="22" ry="56" transform="rotate(120) translate(0 -48)" fill="' + F + '"/><ellipse rx="22" ry="56" transform="rotate(180) translate(0 -48)"/><ellipse rx="22" ry="56" transform="rotate(240) translate(0 -48)" fill="' + F + '"/><ellipse rx="22" ry="56" transform="rotate(300) translate(0 -48)"/><circle r="16" fill="#f2efe9" stroke="none"/></g><path d="M150 280 C 146 310 156 334 150 370"/><path d="M151 318 C 176 300 196 304 206 312 C 186 330 168 328 151 318 Z"/>',
-      serpiente: '<path d="M90 345 C 40 300 70 250 150 250 C 230 250 260 200 210 160 C 170 128 110 150 120 112 C 128 84 168 80 186 92" stroke-width="16" stroke-linecap="round" opacity=".9"/><path d="M90 345 C 40 300 70 250 150 250 C 230 250 260 200 210 160 C 170 128 110 150 120 112 C 128 84 168 80 186 92" stroke="#0d0d0d" stroke-width="8" stroke-dasharray="2 9" stroke-linecap="round"/><path d="M186 92 C 200 82 216 88 214 100 C 212 112 196 112 186 104 Z" fill="' + F + '"/><path d="M214 98 L232 92 M232 92 L240 86 M232 92 L240 98"/>',
-      ala: '<path d="M60 320 C 70 200 150 110 262 80 C 236 140 230 196 250 252 C 190 258 120 286 60 320 Z" fill="' + F + '"/><path d="M84 300 C 120 250 170 214 238 196 M100 280 C 140 222 190 176 246 150 M118 256 C 160 196 206 146 254 116 M140 226 C 176 170 214 124 258 94"/>'
-    };
-    return '<svg viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>' + sombra + rel + '</defs><rect width="300" height="400" fill="url(#s' + seed + ')"/><g fill="none" stroke="#f2efe9" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">' + (formas[tipo] || formas.ojo) + '</g></svg>';
+  /* ---------- 3. Pasillo recto: cada scroll avanza; D'Santy (izq.), Mimi (der.), Roland (izq.) y al final «Agenda de todos» ---------- */
+  // Siluetas neón de cuerpo entero (no hay fotos reales; nada de caras): gorra, moño y barba las distinguen.
+  const CUERPO = '<circle cx="60" cy="40" r="21"/><path d="M34 74q0-8 8-8h36q8 0 8 8l5 96q0 7-7 7h-7l-3 113H62l-2-96-2 96H46l-3-113h-7q-7 0-7-7z"/>';
+  const EXTRA = { dsanty: '<path d="M39 34q2-20 21-20t21 18l14 5q-10 4-56-1z"/>', mimi: '<circle cx="60" cy="13" r="9"/>', roland: '<path d="M45 48q15 22 30 0"/>' };
+  function silueta(id) {
+    return '<svg class="sil" viewBox="0 0 120 300" aria-hidden="true"><g fill="rgba(217,28,156,.07)" stroke="#ff4fc3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">' + CUERPO + (EXTRA[id] || '') + '</g></svg>';
   }
-  const PIEZAS = { dsanty: ['ojo', 'luna', 'daga'], mimi: ['flor', 'serpiente', 'luna'], roland: ['ala', 'daga', 'ojo'] };
-  function pintarParadas() {
-    $('#paradas').innerHTML = A.TATUADORES.map((t, i) => '<article class="parada" id="art-' + t.id + '"><div class="caja"><div><p class="par-num">0' + (i + 1) + ' / 0' + A.TATUADORES.length + '</p><h3 class="par-nombre">' + esc(t.nombre) + '</h3><div class="par-estilos">' + t.estilos.map(e => '<span class="chip">' + esc(e) + ' [ejemplo]</span>').join('') + '</div>' + (t.ig ? '<p class="par-ig"><a href="https://www.instagram.com/' + t.ig + '/" target="_blank" rel="noopener">@' + t.ig + '</a></p>' : '') + '<a class="btn btn-tinta" href="#agenda" data-ver="' + t.id + '">Ver su agenda</a></div><div class="piezas">' + PIEZAS[t.id].map((tp, j) => '<figure class="pieza" style="margin:0">' + arte(11 + i * 7 + j * 3, tp) + '<span>[ejemplo]</span></figure>').join('') + '</div></div></article>').join('');
+  const T = A.TATUADORES, N = T.length;
+  function huecosDe(t) {
+    const s = A.leer(), out = [];
+    A.semana().forEach(d => A.FRANJAS.forEach(f => { if (out.length < 4 && A.estado(A.clave(t.id, d.iso, f.ini), s) === 'libre') out.push(d.txt + ' ' + f.ini); }));
+    return out.map(h => '<li>' + esc(h) + '</li>').join('') || '<li class="nada">Sin huecos esta semana</li>';
+  }
+  function tablaTodos() {
+    const s = A.leer(), dias = A.semana();
+    const cab = '<tr><th scope="col"><span class="sr">Tatuador</span></th>' + dias.map(d => '<th scope="col">' + esc(d.txt) + ' <small>' + d.num + '</small></th>').join('') + '</tr>';
+    const filas = T.map(t => '<tr><th scope="row">' + esc(t.nombre) + '</th>' + dias.map(d => {
+      const f = A.FRANJAS.find(f => A.estado(A.clave(t.id, d.iso, f.ini), s) === 'libre');
+      return '<td>' + (f ? '<b>' + f.ini + '</b>' : '<span>·</span>') + '</td>';
+    }).join('') + '</tr>').join('');
+    return '<table class="tabla-todos"><caption class="sr">Primer hueco libre de cada tatuador por día</caption><thead>' + cab + '</thead><tbody>' + filas + '</tbody></table>';
+  }
+  $('#artistas').innerHTML = T.map((t, i) => '<article class="artista ' + (i % 2 ? 'der' : 'izq') + '" id="art-' + t.id + '" data-i="' + i + '" aria-labelledby="n-' + t.id + '">' + silueta(t.id) + '<div class="tarjeta"><p class="par-num">0' + (i + 1) + ' / 0' + N + '</p><h2 class="par-nombre" id="n-' + t.id + '">' + esc(t.nombre) + '</h2><p class="par-estilo">' + esc(t.estilos.join(' · ')) + ' <span class="ej">[ejemplo] · huecos de la demo</span></p>' + (t.ig ? '<p class="par-ig"><a href="https://www.instagram.com/' + t.ig + '/" target="_blank" rel="noopener">@' + t.ig + '</a></p>' : '') + '<ul class="mini-huecos" data-huecos="' + t.id + '">' + huecosDe(t) + '</ul><a class="btn btn-tinta" href="#agenda" data-ver="' + t.id + '">Ver su agenda</a></div></article>').join('') +
+    '<article class="artista centro juntos" id="art-juntos" data-i="' + N + '" aria-labelledby="n-juntos"><div class="tarjeta"><div class="trio" aria-hidden="true">' + T.map(t => silueta(t.id)).join('') + '</div><p class="par-num">' + T.map(t => esc(t.nombre)).join(' · ') + '</p><h2 class="par-nombre" id="n-juntos">Agenda de todos</h2><p class="par-estilo">Primer hueco libre de cada uno, de martes a sábado.</p><div class="tabla-caja" id="tablaTodos">' + tablaTodos() + '</div><a class="btn btn-tinta" href="#agenda">Pedir cita</a></div></article>';
+  addEventListener('adikto:cambio', () => { document.querySelectorAll('[data-huecos]').forEach(u => { u.innerHTML = huecosDe(A.tatuador(u.dataset.huecos)); }); });
+  addEventListener('adikto:cambio', () => { $('#tablaTodos').innerHTML = tablaTodos(); });
+
+  const pasillo = $('#pasillo'), arts = [...document.querySelectorAll('.artista')], barra = $('#progreso'), guiaN = $('#guiaN');
+  const vivo = !reducido && 'IntersectionObserver' in window;
+  const PASO = 1400;
+  const PARADAS = arts.map((_, i) => (i + 1) * PASO);
+  const FIN = PARADAS[PARADAS.length - 1];
+  const MARCOS = []; for (let z = 350; z <= FIN + 900; z += 350) MARCOS.push(z);
+  const marcosEl = MARCOS.map(() => { const m = document.createElement('i'); m.className = 'marco'; $('#marcos').appendChild(m); return m; });
+  // Tramos: viaje (1) + parada quieta (0,75) por tarjeta; la cámara se para con la tarjeta delante.
+  const VIAJE = 1, QUIETO = 0.75, TOTAL = PARADAS.length * (VIAJE + QUIETO);
+  const suave = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  const DELANTE = 130; // a cuánta distancia se para la cámara de la tarjeta
+  function camara(p) {
+    let u = p * TOTAL;
+    for (let i = 0; i < PARADAS.length; i++) {
+      const desde = i ? PARADAS[i - 1] - DELANTE : 0, hasta = PARADAS[i] - DELANTE;
+      if (u <= VIAJE) return { z: desde + (hasta - desde) * suave(u), parada: u > VIAJE * 0.92 ? i : -1 };
+      u -= VIAJE;
+      if (u <= QUIETO) return { z: hasta, parada: i };
+      u -= QUIETO;
+    }
+    return { z: FIN - DELANTE, parada: PARADAS.length - 1 };
+  }
+  let ultimaParada = -1, ancho = innerWidth;
+  function lado(el) { return el.classList.contains('izq') ? -1 : el.classList.contains('der') ? 1 : 0; }
+  function pintarPasillo() {
+    const r = pasillo.getBoundingClientRect(), total = pasillo.offsetHeight - innerHeight;
+    const p = Math.min(1, Math.max(0, -r.top / (total || 1)));
+    const cam = camara(p);
+    barra.style.transform = 'scaleX(' + p.toFixed(4) + ')';
+    const nAct = Math.min(arts.length, Math.floor(p * TOTAL / (VIAJE + QUIETO)) + 1);
+    if (guiaN.textContent !== nAct + ' / ' + arts.length) guiaN.textContent = nAct + ' / ' + arts.length;
+    const movil = ancho < 760, dx = movil ? ancho * 0.04 : Math.min(ancho * 0.19, 290), giro = movil ? 8 : 15;
+    arts.forEach((el, i) => {
+      const rel = cam.z - PARADAS[i];               // <0: aún delante · >0: ya la has pasado
+      const lejos = Math.max(0, -rel);
+      let o = rel > 0 ? 1 - rel / 200 : 1 - Math.max(0, lejos - 1500) / 1300;
+      o = Math.max(0, Math.min(1, o));
+      const s = lado(el);
+      // al pasar de largo, la tarjeta se aparta hacia su pared
+      const fuera = rel > -DELANTE ? (rel + DELANTE) * 1.4 * (s || 0) : 0;
+      el.style.transform = 'translate3d(calc(-50% + ' + (s * dx + fuera).toFixed(1) + 'px),-50%,' + rel.toFixed(1) + 'px) rotateY(' + (-s * giro) + 'deg)';
+      el.style.opacity = o.toFixed(3);
+      el.style.zIndex = String(Math.max(1, Math.round(20000 + rel)));
+      el.style.visibility = o < 0.01 ? 'hidden' : 'visible';
+      el.classList.toggle('activo', Math.abs(rel + DELANTE) < 140);
+    });
+    marcosEl.forEach((m, i) => {
+      const rel = cam.z - MARCOS[i];
+      let o = rel > -120 ? 1 - (rel + 120) / 220 : 1 - Math.max(0, -rel - 2200) / 1400;
+      o = Math.max(0, Math.min(1, o));
+      m.style.transform = 'translate3d(-50%,-50%,' + rel.toFixed(1) + 'px)';
+      m.style.opacity = o.toFixed(3);
+      m.style.visibility = o < 0.01 ? 'hidden' : 'visible';
+    });
+    if (cam.parada !== ultimaParada) { if (cam.parada >= 0 && Sonido.activo) Sonido.zumbido(0.42, 0.5); ultimaParada = cam.parada; }
+  }
+  // Scroll en el que la cámara está parada delante de la tarjeta i (lo usan la prueba y las capturas).
+  function posicion(i) {
+    const total = pasillo.offsetHeight - innerHeight;
+    const u = i * (VIAJE + QUIETO) + VIAJE + QUIETO * 0.5;
+    return Math.round(pasillo.offsetTop + Math.min(1, u / TOTAL) * total);
+  }
+  window.AdiktoPasillo = { posicion, vivo: () => vivo, n: arts.length };
+  if (vivo) {
+    pasillo.classList.add('vivo');
+    let enVista = false, pend2 = false;
+    new IntersectionObserver(es => { enVista = es[0].isIntersecting; if (enVista) pintarPasillo(); }).observe(pasillo);
+    addEventListener('scroll', () => { if (enVista && !pend2) { pend2 = true; requestAnimationFrame(() => { pend2 = false; pintarPasillo(); }); } }, { passive: true });
+    addEventListener('resize', () => { ancho = innerWidth; pintarPasillo(); });
+    pintarPasillo();
   }
 
   /* ---------- 4. Agenda ---------- */
@@ -120,7 +230,7 @@
     if (h) {
       const e = A.estado(h.dataset.clave);
       if (e === 'libre') abrir(h.dataset.clave);
-      else aviso(e === 'ocupado' ? 'Ese hueco está ocupado. Elige uno verde.' : e === 'pasado' ? 'Esa hora ya ha pasado.' : 'Ese hueco ya tiene una solicitud. Elige uno verde.', true);
+      else aviso(e === 'ocupado' ? 'Ese hueco está ocupado. Elige uno libre.' : e === 'pasado' ? 'Esa hora ya ha pasado.' : 'Ese hueco ya tiene una solicitud. Elige uno libre.', true);
     }
   });
 
@@ -159,10 +269,10 @@
   /* ---------- Apariciones al hacer scroll ---------- */
   function observar() {
     const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visto'); io.unobserve(e.target); } }), { threshold: .25 });
-    document.querySelectorAll('.parada, .cuidados').forEach(el => reducido ? el.classList.add('visto') : io.observe(el));
+    document.querySelectorAll('.cuidados').forEach(el => reducido ? el.classList.add('visto') : io.observe(el));
   }
 
   addEventListener('adikto:cambio', () => { pintarRejilla(); pintarMis(); pintarWalkin(); });
-  pintarParadas(); pintarTodo(); observar();
+  pintarTodo(); observar();
   setInterval(pintarWalkin, 60000);
 })();
