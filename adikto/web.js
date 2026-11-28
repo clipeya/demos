@@ -122,11 +122,13 @@
   const PASO = 1400;
   const PARADAS = arts.map((_, i) => (i + 1) * PASO);
   const FIN = PARADAS[PARADAS.length - 1];
-  const MARCOS = []; for (let z = 350; z <= FIN + 900; z += 350) MARCOS.push(z);
+  // 28-nov 09:37 Andy: «no tienen que salir las líneas del pasillo» → sin marcos (antes cada 350 px de fondo).
+  const MARCOS = [];
   const marcosEl = MARCOS.map(() => { const m = document.createElement('i'); m.className = 'marco'; $('#marcos').appendChild(m); return m; });
   // Tramos: viaje (1) + parada quieta (0,75) por tarjeta; la cámara se para con la tarjeta delante.
-  const VIAJE = 1, QUIETO = 0.75, TOTAL = PARADAS.length * (VIAJE + QUIETO);
-  const suave = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  const VIAJE = 1, QUIETO = 1.4, TOTAL = PARADAS.length * (VIAJE + QUIETO);
+  // 28-nov Andy: «movimiento menos evidente, menos cuadriculado» → curva seno (arranca y frena sin tirón) en vez de cúbica.
+  const suave = x => 0.5 - 0.5 * Math.cos(Math.PI * x);
   const DELANTE = 130; // a cuánta distancia se para la cámara de la tarjeta
   function camara(p) {
     let u = p * TOTAL;
@@ -148,15 +150,15 @@
     barra.style.transform = 'scaleX(' + p.toFixed(4) + ')';
     const nAct = Math.min(arts.length, Math.floor(p * TOTAL / (VIAJE + QUIETO)) + 1);
     if (guiaN.textContent !== nAct + ' / ' + arts.length) guiaN.textContent = nAct + ' / ' + arts.length;
-    const movil = ancho < 760, dx = movil ? ancho * 0.04 : Math.min(ancho * 0.19, 290), giro = movil ? 8 : 15;
+    const movil = ancho < 760, dx = movil ? 0 : Math.min(ancho * 0.07, 110), giro = movil ? 0 : 4;
     arts.forEach((el, i) => {
       const rel = cam.z - PARADAS[i];               // <0: aún delante · >0: ya la has pasado
       const lejos = Math.max(0, -rel);
-      let o = rel > 0 ? 1 - rel / 200 : 1 - Math.max(0, lejos - 1500) / 1300;
+      let o = rel > 0 ? 1 - rel / 200 : (i === 0 ? 1 : 1 - Math.max(0, lejos - 380) / 650); // solo se ve la tarjeta a la que vas (la 1.ª, desde el principio)
       o = Math.max(0, Math.min(1, o));
       const s = lado(el);
       // al pasar de largo, la tarjeta se aparta hacia su pared
-      const fuera = rel > -DELANTE ? (rel + DELANTE) * 1.4 * (s || 0) : 0;
+      const fuera = rel > -DELANTE ? (rel + DELANTE) * 0.6 * (s || 0) : 0;
       // CAUSA DEL DESBORDE (28-nov): lo ya pasado seguía en el DOM con visibility:hidden y translateZ por encima de la
       // perspectiva (detrás de la cámara). visibility:hidden SÍ cuenta para el ancho desplazable y WebKit (Safari iOS)
       // proyecta esas cajas enormes hacia los lados. Ahora: lo invisible sale del flujo (display:none) y z nunca pasa de 260 px.
@@ -189,12 +191,27 @@
     return Math.round(pasillo.offsetTop + Math.min(1, u / TOTAL) * total);
   }
   window.AdiktoPasillo = { posicion, vivo: () => vivo, n: arts.length };
+  // 28-nov Andy: «que pare justamente en la ficha de cada tatuador». El imán CSS (scroll-snap) atrapaba la rueda (revisor-web, vuelta 1).
+  // Ahora: tramo quieto largo por ficha + al soltar el scroll en el último 35 % de un viaje, termina de llegar SOLO hacia delante.
+  let dir = 1, ultY = scrollY, t0 = 0;
+  function asentar() {
+    const total = pasillo.offsetHeight - innerHeight, y = scrollY - pasillo.offsetTop;
+    if (y <= 0 || y >= total) return;
+    const u = y / total * TOTAL, seg = VIAJE + QUIETO, k = Math.floor(u / seg), dentro = u - k * seg;
+    if (dentro >= VIAJE || k >= arts.length) return;          // ya está quieta delante de una ficha
+    const frac = dentro / VIAJE;
+    let destino = null;
+    if (dir > 0 && frac > 0.65) destino = posicion(k);         // casi llegando a la ficha k
+    else if (dir < 0 && frac < 0.35 && k > 0) destino = posicion(k - 1); // subiendo, casi de vuelta en la anterior
+    if (destino !== null && Math.abs(destino - scrollY) > 4) scrollTo({ top: destino, behavior: 'smooth' });
+  }
   if (vivo) {
     pasillo.classList.add('vivo');
     let enVista = false, pend2 = false;
     new IntersectionObserver(es => { enVista = es[0].isIntersecting; if (enVista) pintarPasillo(); }).observe(pasillo);
     addEventListener('scroll', () => { if (enVista && !pend2) { pend2 = true; requestAnimationFrame(() => { pend2 = false; pintarPasillo(); }); } }, { passive: true });
     addEventListener('resize', () => { ancho = innerWidth; pintarPasillo(); });
+    addEventListener('scroll', () => { const y = scrollY; if (y !== ultY) dir = y > ultY ? 1 : -1; ultY = y; clearTimeout(t0); if (enVista) t0 = setTimeout(asentar, 220); }, { passive: true });
     pintarPasillo();
   }
 

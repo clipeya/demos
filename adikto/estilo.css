@@ -90,10 +90,9 @@ section{scroll-margin-top:var(--cab)}
 .artistas{display:grid;gap:28px;padding:0 var(--gut);max-width:1180px;margin:0 auto}
 .pasillo.vivo{height:760vh;height:760svh}
 .vivo .escena{position:sticky;top:0;height:100vh;height:100svh;padding:0;overflow:hidden;clip-path:inset(0);perspective:720px;perspective-origin:50% 50%;background:radial-gradient(60% 55% at 50% 50%,#000 0,#0d0511 35%,#1b0a22 100%)}
-.vivo .fuga{display:block;position:absolute;inset:0;pointer-events:none;background:
-  linear-gradient(to top right,transparent calc(50% - 1px),rgba(217,28,156,.28) 50%,transparent calc(50% + 1px)),
-  linear-gradient(to top left,transparent calc(50% - 1px),rgba(217,28,156,.28) 50%,transparent calc(50% + 1px)),
-  radial-gradient(14% 12% at 50% 50%,rgba(108,34,115,.35),transparent)}
+/* 28-nov Andy: sin las líneas diagonales del pasillo; solo queda la luz del fondo */
+.vivo .fuga{display:block;position:absolute;inset:0;pointer-events:none;background:radial-gradient(30% 26% at 50% 50%,rgba(108,34,115,.32),transparent)}
+
 /* cada capa 3D recorta lo suyo: WebKit no siempre deja que el overflow:hidden de un abuelo recorte hijos con translateZ */
 .vivo .marcos{display:block;position:absolute;inset:0;perspective:720px;pointer-events:none;overflow:hidden}
 .marco{position:absolute;left:50%;top:50%;width:100%;height:100%;border:1.5px solid rgba(217,28,156,.6);will-change:transform,opacity;visibility:hidden}
