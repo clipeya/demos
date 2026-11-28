@@ -12,8 +12,11 @@
   --display:"Anton","Impact","Arial Narrow",sans-serif; --texto:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;overflow-x:clip}
-body{margin:0;background:var(--fondo);color:var(--tx);font-family:var(--texto);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:clip}
+/* red de seguridad, no la cura: el desborde se evita en origen (pasillo 3D, ver web.js). Safari < 16 no entiende «clip» y tiraba la
+   regla entera; por eso primero «hidden» en html (se propaga al viewport y no rompe el sticky del pasillo) y «clip» solo donde existe. */
+html{scroll-behavior:smooth;overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+@supports (overflow:clip){html{overflow-x:clip}body{overflow-x:clip}}
+body{margin:0;background:var(--fondo);color:var(--tx);font-family:var(--texto);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;max-width:100%}
 a{color:inherit}
 img,svg{display:block;max-width:100%}
 h1,h2,h3{font-family:var(--display);font-weight:400;letter-spacing:.01em;line-height:.95;margin:0 0 12px;text-transform:uppercase}
@@ -40,12 +43,12 @@ section{scroll-margin-top:var(--cab)}
 .cab-barra{display:flex;justify-content:space-between;align-items:center;padding:8px var(--gut) 12px}
 .logo{display:block;text-decoration:none}
 .cab .logo img{height:38px;width:auto;opacity:0;transform:translateY(-6px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
-.ya-dentro .cab .logo img{opacity:1;transform:none}
+.ya-dentro .cab .logo img{opacity:1;transform:none;transition-delay:2.2s} /* el logo pequeño llega cuando el grande ya se ha destapado */
 .cab-nav{display:flex;align-items:center;gap:12px}
 .cab-nav a:not(.btn){font-size:14px;font-weight:600;text-decoration:none;color:var(--tx2)}
 .cab-nav a:not(.btn):hover{color:var(--tx)}
 .cab-nav .btn{min-height:44px;padding:0 18px;font-size:14px}
-.sonido{width:44px;height:44px;border-radius:50%;border:1px solid var(--linea);background:#150d1acc;color:var(--tx);display:grid;place-items:center;cursor:pointer;transition:border-color .25s var(--ease)}
+.sonido{width:44px;height:44px;flex:0 0 44px;border-radius:50%;border:1px solid var(--linea);background:#150d1acc;color:var(--tx2);display:grid;place-items:center;cursor:pointer;transition:border-color .25s var(--ease)}
 .sonido:hover{border-color:var(--magenta)}
 .sonido svg{width:20px;height:20px}
 .sonido .alt{fill:currentColor}
@@ -54,35 +57,29 @@ section{scroll-margin-top:var(--cab)}
 .sonido[aria-pressed=true]{border-color:var(--magenta);color:var(--magenta2)}
 @media (max-width:420px){.cab-nav a:not(.btn){display:none}}
 
-/* 1 · entrada: se reproduce sola al pulsar «Entrar» */
+/* 1 · entrada: se reproduce sola al cargar (sin botón); la clase .dentro la pone web.js en el primer fotograma */
 .entrada{position:relative;min-height:100vh;min-height:100svh;display:grid;place-items:center;overflow:hidden;background:radial-gradient(80% 60% at 50% 48%,#160819 0,#050307 72%);padding:calc(var(--cab) + 10px) var(--gut) 90px}
 .ent-centro{position:relative;z-index:2;text-align:center;width:100%;max-width:720px}
 .ent-pre{font-size:12px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:var(--tx2);margin-bottom:22px}
 .ent-logo{position:relative;margin:0 auto;width:min(86vw,560px)}
-.ent-logo img{width:100%;height:auto;-webkit-mask-image:radial-gradient(circle at 50% 58%,#000 var(--r),transparent calc(var(--r) + 22%));mask-image:radial-gradient(circle at 50% 58%,#000 var(--r),transparent calc(var(--r) + 22%));filter:drop-shadow(0 8px 30px rgba(217,28,156,.25))}
-.ent-pila{display:grid;place-items:center}
-.ent-pila>*{grid-area:1/1}
+.ent-logo img{--r:-22%;width:100%;height:auto;-webkit-mask-image:radial-gradient(circle at 50% 58%,#000 var(--r),transparent calc(var(--r) + 22%));mask-image:radial-gradient(circle at 50% 58%,#000 var(--r),transparent calc(var(--r) + 22%));filter:drop-shadow(0 8px 30px rgba(217,28,156,.25))}
+.ent-pila{position:relative;display:grid;place-items:center}
+.ent-pila>.ent-logo{grid-area:1/1}
 .gotita{position:absolute;left:50%;top:56%;width:16px;height:22px;margin:-11px 0 0 -8px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;background:radial-gradient(circle at 34% 30%,#a993c9 0,#675788 12%,#2a0f30 34%,#050307 70%);border:1px solid rgba(217,28,156,.55);box-shadow:0 0 10px rgba(108,34,115,.9),0 0 22px rgba(217,28,156,.35);opacity:0}
 .onda{position:absolute;left:50%;top:56%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;border:1.5px solid #6C2273;box-shadow:0 0 12px rgba(103,87,136,.6);opacity:0}
-.puerta{display:flex;flex-direction:column;align-items:center;gap:6px;transition:opacity .45s var(--ease),transform .45s var(--ease)}
-.btn-entrar{min-height:54px;padding:0 30px;font-size:16px}
-.btn-entrar svg{width:22px;height:22px}
-.enlace-mudo{background:none;border:0;color:var(--tx2);font:600 14px var(--texto);text-decoration:underline;text-underline-offset:4px;min-height:44px;padding:0 14px;cursor:pointer}
-.enlace-mudo:hover{color:var(--tx)}
 .ent-datos{margin:22px 0 0;font-size:15px;font-weight:600;color:var(--tx);opacity:0;transform:translateY(10px)}
 .baja{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--tx2);opacity:0;white-space:nowrap}
 .baja::after{content:"";display:block;width:1px;height:30px;background:var(--magenta);margin:10px auto 0;animation:baja 1.8s var(--ease) infinite}
 @keyframes baja{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
-/* antes de entrar: el logo espera tapado; al entrar, la tinta se abre y lo destapa */
-.dentro .gotita{animation:cae .7s cubic-bezier(.55,0,1,.45) forwards}
-.dentro .onda{animation:onda 1.1s var(--ease) .66s forwards}
-.dentro .ent-logo img{animation:revela 1.5s var(--ease) .66s forwards}
-.dentro .puerta{opacity:0;transform:translateY(8px);pointer-events:none;visibility:hidden;transition:opacity .45s var(--ease),transform .45s var(--ease),visibility 0s .45s}
-.dentro .ent-datos{animation:sube .9s var(--ease) 1.9s forwards}
-.dentro .baja{animation:aparece .9s var(--ease) 2.6s forwards}
+/* el logo espera tapado; cae la gota (0,25 s), se abre la onda y la tinta lo destapa */
+.dentro .gotita{animation:cae .7s cubic-bezier(.55,0,1,.45) .25s forwards}
+.dentro .onda{animation:onda 1.1s var(--ease) .91s forwards}
+.dentro .ent-logo img{animation:revela 1.5s var(--ease) .91s forwards}
+.dentro .ent-datos{animation:sube .9s var(--ease) 2.1s forwards}
+.dentro .baja{animation:aparece .9s var(--ease) 2.8s forwards}
 @keyframes cae{0%{opacity:1;transform:translateY(-55vh) scaleY(1.25)}92%{opacity:1;transform:translateY(0) scaleY(1.1)}100%{opacity:0;transform:scale(1.8,.35)}}
 @keyframes onda{0%{opacity:.9;transform:scale(.2)}100%{opacity:0;transform:scale(9)}}
-@keyframes revela{to{--r:120%}}
+@keyframes revela{from{--r:-22%}to{--r:120%}}
 @keyframes sube{to{opacity:1;transform:none}}
 @keyframes aparece{to{opacity:1}}
 
@@ -92,14 +89,15 @@ section{scroll-margin-top:var(--cab)}
 .fuga,.marcos,.guia,.progreso{display:none}
 .artistas{display:grid;gap:28px;padding:0 var(--gut);max-width:1180px;margin:0 auto}
 .pasillo.vivo{height:760vh;height:760svh}
-.vivo .escena{position:sticky;top:0;height:100vh;height:100svh;padding:0;overflow:hidden;perspective:720px;perspective-origin:50% 50%;background:radial-gradient(60% 55% at 50% 50%,#000 0,#0d0511 35%,#1b0a22 100%)}
+.vivo .escena{position:sticky;top:0;height:100vh;height:100svh;padding:0;overflow:hidden;clip-path:inset(0);perspective:720px;perspective-origin:50% 50%;background:radial-gradient(60% 55% at 50% 50%,#000 0,#0d0511 35%,#1b0a22 100%)}
 .vivo .fuga{display:block;position:absolute;inset:0;pointer-events:none;background:
   linear-gradient(to top right,transparent calc(50% - 1px),rgba(217,28,156,.28) 50%,transparent calc(50% + 1px)),
   linear-gradient(to top left,transparent calc(50% - 1px),rgba(217,28,156,.28) 50%,transparent calc(50% + 1px)),
   radial-gradient(14% 12% at 50% 50%,rgba(108,34,115,.35),transparent)}
-.vivo .marcos{display:block;position:absolute;inset:0;perspective:720px;pointer-events:none}
+/* cada capa 3D recorta lo suyo: WebKit no siempre deja que el overflow:hidden de un abuelo recorte hijos con translateZ */
+.vivo .marcos{display:block;position:absolute;inset:0;perspective:720px;pointer-events:none;overflow:hidden}
 .marco{position:absolute;left:50%;top:50%;width:100%;height:100%;border:1.5px solid rgba(217,28,156,.6);will-change:transform,opacity;visibility:hidden}
-.vivo .artistas{display:block;position:absolute;inset:0;padding:0;max-width:none;perspective:720px;pointer-events:none}
+.vivo .artistas{display:block;position:absolute;inset:0;padding:0;max-width:none;perspective:720px;pointer-events:none;overflow:hidden}
 .vivo .artista{pointer-events:auto}
 .vivo .artista{position:absolute;left:50%;top:52%;width:min(640px,90vw);will-change:transform,opacity;visibility:hidden;backface-visibility:hidden}
 .vivo .artista.centro{width:min(760px,92vw)}
@@ -265,6 +263,7 @@ section{scroll-margin-top:var(--cab)}
   html{scroll-behavior:auto}
   .gotita,.onda{display:none}
   .dentro .ent-logo img{animation:none;-webkit-mask-image:none;mask-image:none}
+  .ya-dentro .cab .logo img{transition:none}
   .dentro .ent-datos,.dentro .baja{animation:none;opacity:1;transform:none}
   .baja{transform:translateX(-50%)}
   .msg{transition:none}

@@ -1,4 +1,4 @@
-/* web.js · Adikto demo · comportamiento de index.html v2 (entrada con tinta y sonido, pasillo 3D de artistas, walk-in, agenda, formulario, antes/después)
+/* web.js · Adikto demo · comportamiento de index.html v2.1 (28-nov: entrada sola sin botón, altavoz opcional, pasillo sin desborde; pasillo 3D de artistas, walk-in, agenda, formulario, antes/después)
    Entra: window.Adikto (app.js). Sale: la página viva. Se prueba con prueba_demo.py. */
 (function () {
   const A = window.Adikto;
@@ -8,7 +8,7 @@
 
   /* ---------- 1. Sonido: máquina de tatuar con Web Audio (sin audios de terceros) ----------
      Zumbido de bobina ~124 Hz: diente de sierra filtrado (cuerpo) + ruido en banda modulado a la misma
-     frecuencia (el golpe de la aguja) + leve vaivén del motor. Solo arranca tras un toque del usuario. */
+     frecuencia (el golpe de la aguja) + leve vaivén del motor. Solo suena si el usuario activa el altavoz. */
   const Sonido = (function () {
     let ctx = null, activo = false, master = null, ruido = null;
     function crear() {
@@ -45,27 +45,42 @@
       return true;
     }
     function apagar() { activo = false; if (ctx) master.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.03); }
-    return { encender, apagar, zumbido, get activo() { return activo; } };
+    function despertar() { if (ctx && ctx.state === 'suspended') ctx.resume(); }
+    return { encender, apagar, zumbido, despertar, get activo() { return activo; } };
   })();
-  const bSon = $('#sonido');
+  /* ---------- 1b. Altavoz y entrada sola ----------
+     La entrada (gota → logo) arranca sola al cargar, siempre en silencio: el navegador no deja sonar audio sin un gesto.
+     El altavoz de la cabecera (fijo, pequeño) es lo único que enciende el sonido. Si ya se activó otra vez (localStorage),
+     el primer toque o tecla lo reanuda; el scroll por sí solo no cuenta como gesto, así que el zumbido llega con ese toque. */
+  const bSon = $('#sonido'), PREF = 'adikto:sonido';
+  const quiere = () => { try { return localStorage.getItem(PREF) === '1'; } catch (e) { return false; } };
+  const guardar = v => { try { localStorage.setItem(PREF, v ? '1' : '0'); } catch (e) {} };
   function pintarSonido() {
     bSon.setAttribute('aria-pressed', String(Sonido.activo));
     bSon.setAttribute('aria-label', Sonido.activo ? 'Sonido activado. Silenciar' : 'Sonido apagado. Activar sonido');
   }
-  bSon.addEventListener('click', () => { if (Sonido.activo) Sonido.apagar(); else { Sonido.encender(); Sonido.zumbido(0.5, 0.5); } pintarSonido(); });
-
-  /* ---------- 1b. Entrada: «Entrar» → se reproduce sola (tinta negra con brillo del logo + logo real + zumbido) ---------- */
-  const entrada = $('#intro'); let dentro = false;
-  function entrar(conSonido) {
-    if (dentro) return; dentro = true;
-    if (conSonido && Sonido.encender()) Sonido.zumbido(reducido ? 0.9 : 2.8, 0.9);
+  bSon.addEventListener('click', () => {
+    if (Sonido.activo) { Sonido.apagar(); guardar(false); }
+    else if (Sonido.encender()) { guardar(true); Sonido.zumbido(0.9, 0.7); }
     pintarSonido();
+  });
+  function primerGesto(ev) {
+    if (ev.target && ev.target.closest && ev.target.closest('#sonido')) return; // el propio altavoz ya lo gestiona
+    if (!quiere()) return;                                                       // altavoz apagado: silencio siempre
+    if (!Sonido.activo) { if (Sonido.encender()) { Sonido.zumbido(0.6, 0.5); pintarSonido(); } }
+    else Sonido.despertar();                                                     // por si el navegador lo dejó en pausa
+  }
+  ['pointerup', 'touchend', 'keydown'].forEach(n => addEventListener(n, primerGesto, { capture: true, passive: true }));
+  pintarSonido();
+
+  const entrada = $('#intro'); let dentro = false;
+  function entrar() {
+    if (dentro) return; dentro = true;
     entrada.classList.add('dentro'); document.documentElement.classList.add('ya-dentro');
   }
-  $('#entrar').addEventListener('click', () => entrar(true));
-  $('#entrarMudo').addEventListener('click', () => entrar(false));
-  // Si alguien baja sin tocar, el logo aparece igual (en silencio): nunca se queda la pantalla vacía.
-  addEventListener('scroll', function prim() { if (scrollY > 40) { entrar(false); removeEventListener('scroll', prim); } }, { passive: true });
+  // Dos fotogramas: el navegador pinta primero el estado tapado y luego arranca la animación (si no, se la salta).
+  requestAnimationFrame(() => requestAnimationFrame(entrar)); setTimeout(entrar, 600); // respaldo si no hay fotogramas (pestaña de fondo)
+  window.AdiktoEntrada = { dentro: () => dentro };
 
   /* ---------- 2. Walk-in hoy ---------- */
   function pintarWalkin() {
@@ -142,19 +157,28 @@
       const s = lado(el);
       // al pasar de largo, la tarjeta se aparta hacia su pared
       const fuera = rel > -DELANTE ? (rel + DELANTE) * 1.4 * (s || 0) : 0;
+      // CAUSA DEL DESBORDE (28-nov): lo ya pasado seguía en el DOM con visibility:hidden y translateZ por encima de la
+      // perspectiva (detrás de la cámara). visibility:hidden SÍ cuenta para el ancho desplazable y WebKit (Safari iOS)
+      // proyecta esas cajas enormes hacia los lados. Ahora: lo invisible sale del flujo (display:none) y z nunca pasa de 260 px.
+      const ver = o >= 0.01 && rel < 260;
+      el.style.display = ver ? '' : 'none';
+      if (!ver) { el.classList.remove('activo'); return; }
       el.style.transform = 'translate3d(calc(-50% + ' + (s * dx + fuera).toFixed(1) + 'px),-50%,' + rel.toFixed(1) + 'px) rotateY(' + (-s * giro) + 'deg)';
       el.style.opacity = o.toFixed(3);
       el.style.zIndex = String(Math.max(1, Math.round(20000 + rel)));
-      el.style.visibility = o < 0.01 ? 'hidden' : 'visible';
+      el.style.visibility = 'visible';
       el.classList.toggle('activo', Math.abs(rel + DELANTE) < 140);
     });
     marcosEl.forEach((m, i) => {
       const rel = cam.z - MARCOS[i];
       let o = rel > -120 ? 1 - (rel + 120) / 220 : 1 - Math.max(0, -rel - 2200) / 1400;
       o = Math.max(0, Math.min(1, o));
+      const ver = o >= 0.01 && rel < 260;
+      m.style.display = ver ? '' : 'none';
+      if (!ver) return;
       m.style.transform = 'translate3d(-50%,-50%,' + rel.toFixed(1) + 'px)';
       m.style.opacity = o.toFixed(3);
-      m.style.visibility = o < 0.01 ? 'hidden' : 'visible';
+      m.style.visibility = 'visible';
     });
     if (cam.parada !== ultimaParada) { if (cam.parada >= 0 && Sonido.activo) Sonido.zumbido(0.42, 0.5); ultimaParada = cam.parada; }
   }

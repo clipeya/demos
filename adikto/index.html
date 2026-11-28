@@ -30,22 +30,16 @@
 </header>
 
 <main>
-<!-- 1. ENTRADA: el logo real aparece con tinta + zumbido de máquina (Web Audio) -->
+<!-- 1. ENTRADA: al cargar cae sola una gota de tinta y destapa el logo real. Sin botón. El zumbido (Web Audio) solo suena si se activa el altavoz de la cabecera. -->
 <section class="entrada" id="intro" aria-labelledby="h1">
   <div class="ent-centro">
     <p class="ent-pre">Estudio de tatuajes · Barcelona</p>
     <div class="ent-pila">
     <h1 id="h1" class="ent-logo">
       <img src="img/logo_adikto.webp" alt="Adikto Tattoo" width="588" height="314" fetchpriority="high">
-      
     </h1>
-    <div class="puerta" id="puerta">
-      <button type="button" class="btn btn-tinta btn-entrar" id="entrar">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.6 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        Entrar con sonido
-      </button>
-      <button type="button" class="enlace-mudo" id="entrarMudo">Entrar sin sonido</button>
-    </div>
+    <i class="gotita" aria-hidden="true"></i>
+    <i class="onda" aria-hidden="true"></i>
     </div>
     <p class="ent-datos" id="entDatos">Martes a sábado · 10:00-20:30 · Walk-ins</p>
   </div>
